@@ -47,9 +47,7 @@ WORKLOAD_CATEGORIES = {
 IMAGE_SIZES = {
     "anaconda": 3500,  # ~3.5GB
     "intel/python": 2800,  # ~2.8GB
-    "python:3.14-gil": 150,  # ~150MB, GIL enabled
-    "python:3.14-freethreaded": 150,  # ~150MB, free-threaded (no GIL)
-    "python:3.14-slim": 150,  # ~150MB (legacy label)
+    "python:3.14-slim": 150,  # ~150MB
 }
 
 
@@ -334,13 +332,8 @@ def normalize_image_label(label: str) -> str:
         return "anaconda"
     elif "intel" in label_lower:
         return "intel/python"
-    elif "3.14-freethreaded" in label_lower or "3.14t" in label_lower:
-        return "python:3.14-freethreaded"
-    elif "3.14-gil" in label_lower:
-        return "python:3.14-gil"
     elif "3.14" in label:
-        # Legacy: default to GIL variant for old labels
-        return "python:3.14-gil"
+        return "python:3.14-slim"
     elif "python-slim" in label_lower:
         return "python:slim"
     return label
