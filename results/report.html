@@ -1,0 +1,3498 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Docker Image Selection Guide - Finance Benchmarks</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 32px; background: #f6f7fb; color: #1f2933; }
+    h1 { margin-bottom: 4px; }
+    h2 { margin-top: 32px; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
+    h3 { margin-top: 24px; color: #374151; }
+    .meta { color: #4b5563; margin-bottom: 24px; }
+    
+    /* Executive Summary */
+    .exec-summary { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 24px; border-radius: 12px; margin-bottom: 32px; }
+    .exec-summary h2 { color: white; border: none; margin: 0 0 16px 0; }
+    .exec-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .exec-card { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 16px; }
+    .exec-card h4 { margin: 0 0 8px 0; font-size: 16px; }
+    .exec-card .rec { font-size: 18px; font-weight: bold; color: #fef08a; }
+    .exec-card .why { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+    
+    /* Category sections */
+    .category-section { margin: 32px 0; padding: 24px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .category-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+    .category-icon { font-size: 32px; }
+    .category-title { flex: 1; }
+    .category-title h3 { margin: 0; font-size: 20px; }
+    .category-title .subtitle { font-size: 14px; color: #6b7280; }
+    .category-rec { background: #dcfce7; border: 2px solid #16a34a; border-radius: 8px; padding: 12px 16px; }
+    .category-rec.warning { background: #fef3c7; border-color: #d97706; }
+    .category-rec strong { color: #15803d; }
+    .category-rec.warning strong { color: #92400e; }
+    
+    /* Results tables */
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #e5e7eb; padding: 10px 12px; text-align: left; }
+    th { background: #f3f4f6; font-weight: 600; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .ok { color: #15803d; font-weight: 600; }
+    .error { color: #b91c1c; font-weight: 600; }
+    .best { background: #d1fae5; }
+    .winner-cell { background: #bbf7d0; font-weight: bold; }
+    
+    /* Speedup indicators */
+    .speedup { font-weight: bold; padding: 2px 8px; border-radius: 4px; }
+    .speedup-good { background: #d1fae5; color: #15803d; }
+    .speedup-neutral { background: #f3f4f6; color: #6b7280; }
+    .speedup-bad { background: #fee2e2; color: #b91c1c; }
+    
+    /* Free-threading badge */
+    .ft-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .ft-yes { background: #7c3aed; color: white; }
+    .ft-no { background: #e5e7eb; color: #6b7280; }
+    
+    /* BLAS backend badge */
+    .blas-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .blas-mkl { background: #0369a1; color: white; }
+    .blas-openblas { background: #6b7280; color: white; }
+    
+    /* Comparison matrix */
+    .comparison-matrix { margin: 24px 0; }
+    .comparison-matrix th { text-align: center; min-width: 100px; }
+    .comparison-matrix td { text-align: center; }
+    .comparison-matrix .task-name { text-align: left; font-weight: 500; }
+    
+    /* Threading summary */
+    .threading-highlight { background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; padding: 20px; border-radius: 12px; margin: 24px 0; }
+    .threading-highlight h3 { margin: 0 0 12px 0; color: white; }
+    .threading-stats { display: flex; gap: 32px; flex-wrap: wrap; }
+    .threading-stat { text-align: center; }
+    .threading-stat .value { font-size: 28px; font-weight: bold; }
+    .threading-stat .label { font-size: 12px; opacity: 0.9; }
+    
+    /* Warnings */
+    .warning-box { background: #fef3c7; border-left: 4px solid #d97706; padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+    .warning-box strong { color: #92400e; }
+    
+    /* Section headers for thread groupings */
+    .section-header { color: white; padding: 20px 24px; border-radius: 12px; margin: 32px 0 16px 0; }
+    .section-header h2 { color: white; margin: 0; border: none; padding: 0; }
+    .section-header .subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+    
+    /* Version comparison */
+    .version-cell { font-family: monospace; font-size: 13px; }
+    
+    /* Thread comparison section */
+    .thread-comparison { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; padding: 24px; border-radius: 12px; margin: 32px 0; }
+    .thread-comparison h2 { color: white; border: none; margin: 0 0 8px 0; padding: 0; }
+    .thread-comparison .subtitle { opacity: 0.9; margin-bottom: 16px; }
+    .thread-comparison table { background: rgba(255,255,255,0.1); border-radius: 8px; }
+    .thread-comparison th, .thread-comparison td { border-color: rgba(255,255,255,0.2); color: white; }
+    .thread-comparison th { background: rgba(255,255,255,0.15); }
+    .thread-comparison .prefer-1t { background: rgba(59, 130, 246, 0.3); }
+    .thread-comparison .prefer-8t { background: rgba(16, 185, 129, 0.3); }
+    .thread-comparison .similar { background: rgba(255,255,255,0.05); }
+    
+    code { background: #eef2ff; padding: 2px 4px; border-radius: 4px; }
+    @media (max-width: 768px) { .exec-summary-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>🐳 Docker Image Selection Guide</h1>
+  <div class="meta">Finance Python Benchmarks • Generated from 6 runs • Which base image should YOU use?</div>
+
+    <!-- Executive Summary aligned with Goal.txt policy -->
+    <div class="exec-summary">
+        <h2>Executive Summary</h2>
+        <div class="exec-summary-grid">
+            
+            <div class="exec-card">
+                <h4>IO-Bound Workloads</h4>
+                <div class="rec">Recommend: python:3.14-gil</div>
+                <div class="why">Performance similar across images (≤1.10× spread). python:3.14-gil recommended as smallest, ~150MB.</div>
+            </div>
+            
+            <div class="exec-card">
+                <h4>Pandas/Polars ETL</h4>
+                <div class="rec">Recommend: python:3.14-gil</div>
+                <div class="why">Performance similar across images (≤1.10× spread). python:3.14-gil recommended as smallest, ~150MB.</div>
+            </div>
+            
+            <div class="exec-card">
+                <h4>NumPy BLAS-Heavy</h4>
+                <div class="rec">Recommend: intel/python</div>
+                <div class="why">Dense linear algebra benefits observed. Recommend intel/python on Intel CPUs; benchmark on your hardware (MKL vs OpenBLAS).</div>
+            </div>
+            
+            <div class="exec-card">
+                <h4>Pure Python CPU-Bound</h4>
+                <div class="rec">Recommend: python:3.14-gil</div>
+                <div class="why">No free-threaded advantage observed; performance similar. Recommend smallest image (python:3.14-gil).</div>
+            </div>
+            
+            <div class="exec-card">
+                <h4>Real-World Mixed Workloads</h4>
+                <div class="rec">Recommend: python:3.14-gil</div>
+                <div class="why">Performance similar across images (≤1.10× spread). python:3.14-gil recommended as smallest, ~150MB.</div>
+            </div>
+            
+        </div>
+    </div>
+
+  <!-- Results by Thread Count -->
+  
+  <div class="section-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+    <h2>🔹 Single-Threaded Results (1 Thread)</h2>
+    <div class="subtitle">Baseline performance</div>
+  </div>
+
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">📁</div>
+      <div class="category-title">
+        <h3>IO-Bound Workloads</h3>
+        <div class="subtitle">Parquet scan, file hashing, compression</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_parquet_scan</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.02s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.03s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.04s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_parquet_roundtrip</td>
+        
+          
+          
+            
+            <td class="">
+              2.74s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              2.17s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.30s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_file_hashing</td>
+        
+          
+          
+            
+            <td class="">
+              1.92s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.83s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.74s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🔄</div>
+      <div class="category-title">
+        <h3>Pandas/Polars ETL</h3>
+        <div class="subtitle">Joins, groupby, resample, aggregations</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_pandas_groupby_join</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              6.80s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              7.43s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              8.95s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_polars_lazy_agg</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              7.86s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              8.28s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              9.08s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_pandas_resample</td>
+        
+          
+          
+            
+            <td class="">
+              5.21s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              4.91s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              6.69s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_python_feature_loop</td>
+        
+          
+          
+            
+            <td class="">
+              2.43s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              2.25s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              3.21s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_polars_python_udf</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              2.05s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.71s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              3.82s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">⚡</div>
+      <div class="category-title">
+        <h3>NumPy BLAS-Heavy</h3>
+        <div class="subtitle">Matrix ops, SVD, eigenvalue, Cholesky</div>
+      </div>
+    </div>
+    
+    
+    <div class="warning-box">
+      <strong>⚠️ CPU Architecture Warning:</strong> Intel MKL is optimized for Intel CPUs. 
+      On AMD Ryzen/EPYC, MKL may be <strong>slower</strong> than OpenBLAS due to CPU vendor checks.
+      Always benchmark on YOUR hardware before committing to intel/python.
+    </div>
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_matrix_multiply</td>
+        
+          
+          
+            
+            <td class="">
+              0.55s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.21s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.30s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_eigenvalue</td>
+        
+          
+          
+            
+            <td class="">
+              0.22s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.08s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.69s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_svd</td>
+        
+          
+          
+            
+            <td class="">
+              0.29s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.11s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              3.81s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_cholesky</td>
+        
+          
+          
+            
+            <td class="">
+              0.16s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.08s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.37s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🧵</div>
+      <div class="category-title">
+        <h3>Pure Python CPU-Bound</h3>
+        <div class="subtitle">Python loops, Monte Carlo, order book replay</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_cpu_bound</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.06s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.08s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.10s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_threaded_sum</td>
+        
+          
+          
+            
+            <td class="">
+              0.66s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.60s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.78s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_monte_carlo_var</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.97s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.17s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.39s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_orderbook_replay</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.66s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.68s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.40s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🏢</div>
+      <div class="category-title">
+        <h3>Real-World Mixed Workloads</h3>
+        <div class="subtitle">Multi-stage ETL pipelines, risk calculations with threading</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">realworld_etl_pipeline</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              261.23s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              265.39s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              268.10s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">realworld_risk_calc</td>
+        
+          
+          
+            
+            <td class="">
+              2.19s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.95s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.90s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="section-header" style="background: linear-gradient(135deg, #10b981, #047857);">
+    <h2>🔸 Multi-Threaded Results (8 Threads)</h2>
+    <div class="subtitle">Parallel workload performance</div>
+  </div>
+
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">📁</div>
+      <div class="category-title">
+        <h3>IO-Bound Workloads</h3>
+        <div class="subtitle">Parquet scan, file hashing, compression</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_parquet_scan</td>
+        
+          
+          
+            
+            <td class="">
+              0.02s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.02s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.05s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_parquet_roundtrip</td>
+        
+          
+          
+            
+            <td class="">
+              2.32s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.11s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.86s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">io_file_hashing</td>
+        
+          
+          
+            
+            <td class="">
+              0.93s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.89s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.16s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🔄</div>
+      <div class="category-title">
+        <h3>Pandas/Polars ETL</h3>
+        <div class="subtitle">Joins, groupby, resample, aggregations</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_pandas_groupby_join</td>
+        
+          
+          
+            
+            <td class="">
+              6.51s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              6.78s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              6.30s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_polars_lazy_agg</td>
+        
+          
+          
+            
+            <td class="">
+              2.71s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.47s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              2.44s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_pandas_resample</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              4.65s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              4.97s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              4.77s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_python_feature_loop</td>
+        
+          
+          
+            
+            <td class="">
+              2.38s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              2.26s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.35s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">etl_polars_python_udf</td>
+        
+          
+          
+            
+            <td class="">
+              0.87s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.98s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.79s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">⚡</div>
+      <div class="category-title">
+        <h3>NumPy BLAS-Heavy</h3>
+        <div class="subtitle">Matrix ops, SVD, eigenvalue, Cholesky</div>
+      </div>
+    </div>
+    
+    
+    <div class="warning-box">
+      <strong>⚠️ CPU Architecture Warning:</strong> Intel MKL is optimized for Intel CPUs. 
+      On AMD Ryzen/EPYC, MKL may be <strong>slower</strong> than OpenBLAS due to CPU vendor checks.
+      Always benchmark on YOUR hardware before committing to intel/python.
+    </div>
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_matrix_multiply</td>
+        
+          
+          
+            
+            <td class="">
+              0.21s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.20s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.26s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_eigenvalue</td>
+        
+          
+          
+            
+            <td class="">
+              0.09s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.08s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.19s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_svd</td>
+        
+          
+          
+            
+            <td class="">
+              0.12s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.12s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.94s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">blas_cholesky</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              0.08s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.08s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              0.11s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🧵</div>
+      <div class="category-title">
+        <h3>Pure Python CPU-Bound</h3>
+        <div class="subtitle">Python loops, Monte Carlo, order book replay</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_cpu_bound</td>
+        
+          
+          
+            
+            <td class="">
+              1.06s
+              
+              
+                <br><span class="speedup speedup-bad">0.9× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.03s
+              
+              
+                <br><span class="speedup speedup-neutral">0.9× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.57s
+              
+              
+                <br><span class="speedup speedup-neutral">0.9× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_threaded_sum</td>
+        
+          
+          
+            
+            <td class="">
+              1.40s
+              
+              
+                <br><span class="speedup speedup-neutral">0.9× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.24s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.62s
+              
+              
+                <br><span class="speedup speedup-neutral">1.0× speedup</span>
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_monte_carlo_var</td>
+        
+          
+          
+            
+            <td class="">
+              2.26s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              2.44s
+              
+                <br><span class="blas-badge blas-mkl">MKL</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.82s
+              
+                <br><span class="blas-badge blas-openblas">OpenBLAS</span>
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>python:3.14-gil</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">python_orderbook_replay</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.53s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.57s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              1.70s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+  <div class="category-section">
+    <div class="category-header">
+      <div class="category-icon">🏢</div>
+      <div class="category-title">
+        <h3>Real-World Mixed Workloads</h3>
+        <div class="subtitle">Multi-stage ETL pipelines, risk calculations with threading</div>
+      </div>
+    </div>
+    
+    
+
+    <!-- Comparison Matrix for this category -->
+    <table class="comparison-matrix">
+      <tr>
+        <th>Task</th>
+        
+        <th>anaconda</th>
+        
+        <th>intel/python</th>
+        
+        <th>python:3.14-gil</th>
+        
+        <th>Winner</th>
+      </tr>
+      
+      <tr>
+        <td class="task-name">realworld_etl_pipeline</td>
+        
+          
+          
+            
+            <td class="winner-cell">
+              209.20s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              213.41s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              211.89s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>anaconda</strong></td>
+      </tr>
+      
+      <tr>
+        <td class="task-name">realworld_risk_calc</td>
+        
+          
+          
+            
+            <td class="">
+              1.96s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="winner-cell">
+              1.49s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+          
+          
+            
+            <td class="">
+              4.19s
+              
+              
+              
+                <br><span class="ft-badge ft-no">GIL</span>
+              
+            </td>
+          
+        
+        <td><strong>intel/python</strong></td>
+      </tr>
+      
+    </table>
+  </div>
+  
+  
+  
+
+  <!-- Single-Threaded vs Multi-Threaded Comparison -->
+  
+  <div class="thread-comparison">
+    <h2>📊 When to Use Single-Threaded vs Multi-Threaded</h2>
+    <div class="subtitle">Comparing 1-thread vs 8-thread performance to guide your threading decisions</div>
+    
+    <table>
+      <tr>
+        <th>Task</th>
+        <th>Category</th>
+        <th>Best Image (1t)</th>
+        <th>Time (1t)</th>
+        <th>Best Image (8t)</th>
+        <th>Time (8t)</th>
+        <th>Speedup</th>
+        <th>Recommendation</th>
+      </tr>
+      
+      <tr class="similar">
+        <td>io_parquet_scan</td>
+        <td>io</td>
+        <td>anaconda</td>
+        <td>0.02s</td>
+        <td>intel/python</td>
+        <td>0.02s</td>
+        <td><strong>1.18×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>io_parquet_roundtrip</td>
+        <td>io</td>
+        <td>intel/python</td>
+        <td>2.17s</td>
+        <td>python:3.14-gil</td>
+        <td>1.86s</td>
+        <td><strong>1.17×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="prefer-8t">
+        <td>io_file_hashing</td>
+        <td>io</td>
+        <td>python:3.14-gil</td>
+        <td>1.74s</td>
+        <td>intel/python</td>
+        <td>0.89s</td>
+        <td><strong>1.96×</strong></td>
+        <td>🔸 Use 8 threads</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>etl_pandas_groupby_join</td>
+        <td>etl</td>
+        <td>anaconda</td>
+        <td>6.80s</td>
+        <td>python:3.14-gil</td>
+        <td>6.30s</td>
+        <td><strong>1.08×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="prefer-8t">
+        <td>etl_polars_lazy_agg</td>
+        <td>etl</td>
+        <td>anaconda</td>
+        <td>7.86s</td>
+        <td>python:3.14-gil</td>
+        <td>2.44s</td>
+        <td><strong>3.22×</strong></td>
+        <td>🔸 Use 8 threads</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>etl_pandas_resample</td>
+        <td>etl</td>
+        <td>intel/python</td>
+        <td>4.91s</td>
+        <td>anaconda</td>
+        <td>4.65s</td>
+        <td><strong>1.06×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>etl_python_feature_loop</td>
+        <td>etl</td>
+        <td>intel/python</td>
+        <td>2.25s</td>
+        <td>intel/python</td>
+        <td>2.26s</td>
+        <td><strong>1.00×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="prefer-8t">
+        <td>etl_polars_python_udf</td>
+        <td>etl</td>
+        <td>anaconda</td>
+        <td>2.05s</td>
+        <td>python:3.14-gil</td>
+        <td>0.79s</td>
+        <td><strong>2.59×</strong></td>
+        <td>🔸 Use 8 threads</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>blas_matrix_multiply</td>
+        <td>blas</td>
+        <td>intel/python</td>
+        <td>0.21s</td>
+        <td>intel/python</td>
+        <td>0.20s</td>
+        <td><strong>1.07×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>blas_eigenvalue</td>
+        <td>blas</td>
+        <td>intel/python</td>
+        <td>0.08s</td>
+        <td>intel/python</td>
+        <td>0.08s</td>
+        <td><strong>1.03×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>blas_svd</td>
+        <td>blas</td>
+        <td>intel/python</td>
+        <td>0.11s</td>
+        <td>intel/python</td>
+        <td>0.12s</td>
+        <td><strong>0.98×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>blas_cholesky</td>
+        <td>blas</td>
+        <td>intel/python</td>
+        <td>0.08s</td>
+        <td>anaconda</td>
+        <td>0.08s</td>
+        <td><strong>1.02×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="prefer-1t">
+        <td>python_cpu_bound</td>
+        <td>python</td>
+        <td>anaconda</td>
+        <td>0.06s</td>
+        <td>intel/python</td>
+        <td>1.03s</td>
+        <td><strong>0.06×</strong></td>
+        <td>🔹 Use 1 thread</td>
+      </tr>
+      
+      <tr class="prefer-1t">
+        <td>python_threaded_sum</td>
+        <td>python</td>
+        <td>intel/python</td>
+        <td>0.60s</td>
+        <td>intel/python</td>
+        <td>1.24s</td>
+        <td><strong>0.48×</strong></td>
+        <td>🔹 Use 1 thread</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>python_monte_carlo_var</td>
+        <td>python</td>
+        <td>anaconda</td>
+        <td>1.97s</td>
+        <td>python:3.14-gil</td>
+        <td>1.82s</td>
+        <td><strong>1.09×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="similar">
+        <td>python_orderbook_replay</td>
+        <td>python</td>
+        <td>anaconda</td>
+        <td>1.66s</td>
+        <td>anaconda</td>
+        <td>1.53s</td>
+        <td><strong>1.09×</strong></td>
+        <td>➖ Either works</td>
+      </tr>
+      
+      <tr class="prefer-8t">
+        <td>realworld_etl_pipeline</td>
+        <td>realworld</td>
+        <td>anaconda</td>
+        <td>261.23s</td>
+        <td>anaconda</td>
+        <td>209.20s</td>
+        <td><strong>1.25×</strong></td>
+        <td>🔸 Use 8 threads</td>
+      </tr>
+      
+      <tr class="prefer-1t">
+        <td>realworld_risk_calc</td>
+        <td>realworld</td>
+        <td>python:3.14-gil</td>
+        <td>0.90s</td>
+        <td>intel/python</td>
+        <td>1.49s</td>
+        <td><strong>0.60×</strong></td>
+        <td>🔹 Use 1 thread</td>
+      </tr>
+      
+    </table>
+    
+    <div style="margin-top: 16px; font-size: 14px;">
+      <strong>Key Insights:</strong>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li><strong>🔹 Blue rows:</strong> Single-threaded is faster (threading overhead dominates)</li>
+        <li><strong>🔸 Green rows:</strong> Multi-threaded is faster (≥1.2× speedup from parallelism)</li>
+        <li><strong>Gray rows:</strong> Similar performance - choose based on other factors</li>
+      </ul>
+    </div>
+  </div>
+  
+
+  <!-- Raw Results -->
+  <details style="margin-top: 32px;">
+    <summary style="cursor: pointer; font-weight: 600; padding: 12px; background: #f3f4f6; border-radius: 8px;">
+      📋 Raw Results (click to expand)
+    </summary>
+    <table style="margin-top: 16px;">
+      <tr><th>Image</th><th>Task</th><th>Category</th><th>Duration (s)</th><th>RSS (MB)</th><th>Status</th><th>Details</th></tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.020</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>2.740</td>
+          <td>49.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>1.916</td>
+          <td>-0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>6.800</td>
+          <td>64.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>7.856</td>
+          <td>462.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>5.213</td>
+          <td>2.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>2.425</td>
+          <td>12.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>2.045</td>
+          <td>4.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.552</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | GFLOPS: 57.3</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.219</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>0.291</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.164</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>0.061</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>0.655</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>1.972</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>1.665</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>261.233</td>
+          <td>9.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-1t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>2.194</td>
+          <td>0.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.025</td>
+          <td>0.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>2.321</td>
+          <td>19.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>0.928</td>
+          <td>3.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>6.506</td>
+          <td>41.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>2.711</td>
+          <td>469.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>4.648</td>
+          <td>22.7</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>2.378</td>
+          <td>12.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>0.871</td>
+          <td>24.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.209</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | GFLOPS: 152.9</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.092</td>
+          <td>0.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>0.121</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.079</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>1.057</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.89x</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>1.402</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.95x</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>2.257</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>1.528</td>
+          <td>1.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>209.198</td>
+          <td>-64.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>anaconda-8t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>1.962</td>
+          <td>42.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.032</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>2.168</td>
+          <td>48.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>1.825</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>7.427</td>
+          <td>38.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>8.275</td>
+          <td>268.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>4.911</td>
+          <td>-0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>2.254</td>
+          <td>12.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>2.705</td>
+          <td>0.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.210</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | GFLOPS: 151.2</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.079</td>
+          <td>0.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>0.113</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.081</td>
+          <td>-0.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>0.083</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>0.597</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>2.173</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>1.678</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>265.386</td>
+          <td>-5.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-1t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>0.953</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.017</td>
+          <td>0.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>2.105</td>
+          <td>54.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>0.885</td>
+          <td>3.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>6.779</td>
+          <td>39.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>2.465</td>
+          <td>448.7</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>4.967</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>2.262</td>
+          <td>3.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>0.977</td>
+          <td>25.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.197</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | GFLOPS: 162.1</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.077</td>
+          <td>0.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>0.115</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.084</td>
+          <td>-0.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>1.025</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.93x</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>1.244</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.95x</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>2.438</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: MKL | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>1.571</td>
+          <td>-0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>213.414</td>
+          <td>-345.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>intelpython-8t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>1.490</td>
+          <td>27.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.039</td>
+          <td>0.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>2.303</td>
+          <td>17.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>1.736</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>8.952</td>
+          <td>33.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>9.083</td>
+          <td>286.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>6.687</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>3.212</td>
+          <td>1.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>3.819</td>
+          <td>1.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.295</td>
+          <td>0.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS | GFLOPS: 108.2</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.690</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>3.808</td>
+          <td>-0.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.373</td>
+          <td>-0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>0.095</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>0.783</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 1.00x</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>2.391</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>2.403</td>
+          <td>-0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>268.104</td>
+          <td>16.6</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-1t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>0.896</td>
+          <td>0.2</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>io_parquet_scan</td>
+          <td>io</td>
+          <td>0.045</td>
+          <td>0.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>io_parquet_roundtrip</td>
+          <td>io</td>
+          <td>1.860</td>
+          <td>19.4</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>io_file_hashing</td>
+          <td>io</td>
+          <td>1.157</td>
+          <td>0.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>etl_pandas_groupby_join</td>
+          <td>etl</td>
+          <td>6.297</td>
+          <td>43.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>etl_polars_lazy_agg</td>
+          <td>etl</td>
+          <td>2.437</td>
+          <td>481.5</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>etl_pandas_resample</td>
+          <td>etl</td>
+          <td>4.772</td>
+          <td>41.9</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>etl_python_feature_loop</td>
+          <td>etl</td>
+          <td>2.348</td>
+          <td>2.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>etl_polars_python_udf</td>
+          <td>etl</td>
+          <td>0.789</td>
+          <td>24.8</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;"></td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>blas_matrix_multiply</td>
+          <td>blas</td>
+          <td>0.257</td>
+          <td>1.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS | GFLOPS: 156.0</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>blas_eigenvalue</td>
+          <td>blas</td>
+          <td>0.186</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>blas_svd</td>
+          <td>blas</td>
+          <td>0.940</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>blas_cholesky</td>
+          <td>blas</td>
+          <td>0.109</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>python_cpu_bound</td>
+          <td>python</td>
+          <td>1.574</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.94x</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>python_threaded_sum</td>
+          <td>python</td>
+          <td>1.619</td>
+          <td>0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False | speedup: 0.97x</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>python_monte_carlo_var</td>
+          <td>python</td>
+          <td>1.818</td>
+          <td>0.3</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">BLAS: OpenBLAS | FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>python_orderbook_replay</td>
+          <td>python</td>
+          <td>1.699</td>
+          <td>-0.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>realworld_etl_pipeline</td>
+          <td>realworld</td>
+          <td>211.886</td>
+          <td>-112.1</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+        <tr>
+          <td>python-3.14-slim-8t</td>
+          <td>realworld_risk_calc</td>
+          <td>realworld</td>
+          <td>4.185</td>
+          <td>115.0</td>
+          <td class="ok">ok</td>
+          <td style="font-size: 11px;">FT: False</td>
+        </tr>
+      
+    </table>
+  </details>
+</body>
+</html>
+    

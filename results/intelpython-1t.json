@@ -1,0 +1,448 @@
+{
+  "metadata": {
+    "label": "intelpython-1t",
+    "timestamp": "2025-12-18T11:30:03.608776Z",
+    "scale": 1.0,
+    "threads": 1,
+    "python_version": "3.12.7 | packaged by conda-forge | (main, Oct  4 2024, 16:05:46) [GCC 13.3.0]",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.31",
+    "cpu_count": 20,
+    "memory_gb": 62.69,
+    "env": {
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "POLARS_MAX_THREADS": "1"
+    },
+    "data_dir": "/workspace/.bench_data"
+  },
+  "results": [
+    {
+      "name": "io_parquet_scan",
+      "status": "ok",
+      "duration_s": 0.032419155999377836,
+      "rss_delta_mb": 0.125,
+      "result": {
+        "workload_hint": "io-insensitive",
+        "message": "Image choice has minimal impact; prefer python:slim for production.",
+        "trades_rows": 5000000,
+        "quotes_rows": 8000000,
+        "scan_time_s": 0.03237412999442313
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.108705523001845,
+        0.023891293996712193,
+        0.032419155999377836
+      ],
+      "category": "io"
+    },
+    {
+      "name": "io_parquet_roundtrip",
+      "status": "ok",
+      "duration_s": 2.1676888809961383,
+      "rss_delta_mb": 48.6171875,
+      "result": {
+        "workload_hint": "io-insensitive",
+        "message": "IO and compression dominate; images perform similarly.",
+        "rows": 5000000,
+        "roundtrip_time_s": 2.0516351480036974
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        2.7260809439976583,
+        2.1676888809961383,
+        2.051720314004342
+      ],
+      "category": "io"
+    },
+    {
+      "name": "io_file_hashing",
+      "status": "ok",
+      "duration_s": 1.825176989994361,
+      "rss_delta_mb": 0.0,
+      "result": {
+        "workload_hint": "io-insensitive",
+        "message": "Disk read throughput bound; threading helps IO regardless of GIL.",
+        "files_hashed": 2,
+        "hash_time_s": 1.3494710910017602
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        1.825176989994361,
+        1.8514031349986908,
+        1.3494783900023322
+      ],
+      "category": "io"
+    },
+    {
+      "name": "etl_pandas_groupby_join",
+      "status": "ok",
+      "duration_s": 7.426588986993011,
+      "rss_delta_mb": 38.09765625,
+      "result": {
+        "workload_hint": "etl-insensitive",
+        "message": "Vectorized pandas dominates; images are within ~5-10% typically.",
+        "rows_trades": 5000000,
+        "rows_quotes": 8000000,
+        "rows_merged": 23149612,
+        "rows_result": 10,
+        "etl_time_s": 7.340429233998293
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        7.792489753999689,
+        6.573808594002912,
+        7.426588986993011
+      ],
+      "category": "etl"
+    },
+    {
+      "name": "etl_polars_lazy_agg",
+      "status": "ok",
+      "duration_s": 8.275332621997222,
+      "rss_delta_mb": 268.79296875,
+      "result": {
+        "workload_hint": "etl-insensitive",
+        "message": "Polars Rust engine minimizes Python overhead; images similar.",
+        "rows_result": 10,
+        "top_symbol": "GOOG",
+        "etl_time_s": 7.836702103995776
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        9.135305453004548,
+        8.275332621997222,
+        7.836777959993924
+      ],
+      "category": "etl"
+    },
+    {
+      "name": "etl_pandas_resample",
+      "status": "ok",
+      "duration_s": 4.911048949004908,
+      "rss_delta_mb": -0.1328125,
+      "result": {
+        "workload_hint": "etl-insensitive",
+        "message": "Common OHLC resample; vectorized ops keep images close.",
+        "rows": 5770,
+        "resample_time_s": 4.7628693240039865
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        6.357416920996911,
+        4.911048949004908,
+        4.778128559002653
+      ],
+      "category": "etl"
+    },
+    {
+      "name": "etl_python_feature_loop",
+      "status": "ok",
+      "duration_s": 2.2544826370067312,
+      "rss_delta_mb": 12.62890625,
+      "result": {
+        "workload_hint": "python-cpu-interpret",
+        "message": "Interpreter-driven Python loops; 3.14 may be modestly faster single-thread.",
+        "rows_processed": 500000,
+        "symbols": 2,
+        "features_computed": 3500000,
+        "high_urgency_pct": 24.066000000000003,
+        "python_version": "3.12",
+        "loop_time_s": 2.2002303110057255
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        2.567679906998819,
+        2.2544826370067312,
+        2.2488973590006935
+      ],
+      "category": "etl"
+    },
+    {
+      "name": "etl_polars_python_udf",
+      "status": "ok",
+      "duration_s": 2.7053696520015365,
+      "rss_delta_mb": 0.3515625,
+      "result": {
+        "workload_hint": "python-callback",
+        "message": "Python UDF callbacks show interpreter cost; images remain close.",
+        "rows_processed": 370427,
+        "categories": 20,
+        "top_category": "at_ask_large_normal",
+        "python_version": "3.12",
+        "udf_time_s": 2.8046470859990222
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        2.287144296999031,
+        2.7053696520015365,
+        2.804706835995603
+      ],
+      "category": "etl"
+    },
+    {
+      "name": "blas_matrix_multiply",
+      "status": "ok",
+      "duration_s": 0.21036344800086226,
+      "rss_delta_mb": 0.05078125,
+      "result": {
+        "workload_hint": "blas-sensitive",
+        "message": "Dense DGEMM favors MKL on Intel; consider intel/python on Intel nodes.",
+        "matrix_size": 2500,
+        "elements": 6250000,
+        "gflops": 151.15571458552003,
+        "blas_backend": "MKL",
+        "matmul_time_s": 0.2067404469999019
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.7153667919992586,
+        0.18760864999785554,
+        0.21036344800086226
+      ],
+      "category": "blas"
+    },
+    {
+      "name": "blas_eigenvalue",
+      "status": "ok",
+      "duration_s": 0.07940109800256323,
+      "rss_delta_mb": 0.78125,
+      "result": {
+        "workload_hint": "blas-sensitive",
+        "message": "Eigen decomposition benefits from MKL; benchmark on your hardware.",
+        "matrix_size": 1200,
+        "largest_eigenvalue": 5974.138581154787,
+        "blas_backend": "MKL",
+        "eigen_time_s": 0.07409353499679128
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.09988472300028661,
+        0.07940109800256323,
+        0.0761137149966089
+      ],
+      "category": "blas"
+    },
+    {
+      "name": "blas_svd",
+      "status": "ok",
+      "duration_s": 0.11259291000169469,
+      "rss_delta_mb": 0.0,
+      "result": {
+        "workload_hint": "blas-sensitive",
+        "message": "SVD/PCA often faster with MKL on Intel; AMD may differ.",
+        "matrix_shape": "2000x800",
+        "singular_values": 800,
+        "top10_explained_var": 0.03211745497417194,
+        "blas_backend": "MKL",
+        "svd_time_s": 0.10985713000263786
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.12111637800262542,
+        0.10701767400314566,
+        0.11259291000169469
+      ],
+      "category": "blas"
+    },
+    {
+      "name": "blas_cholesky",
+      "status": "ok",
+      "duration_s": 0.08093221300077857,
+      "rss_delta_mb": -0.3359375,
+      "result": {
+        "workload_hint": "blas-sensitive",
+        "message": "Risk-model Cholesky is MKL-optimized on Intel; verify on AMD.",
+        "matrix_size": 1800,
+        "blas_backend": "MKL",
+        "cholesky_time_s": 0.07664000299701001
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.07541846999811241,
+        0.08109296299517155,
+        0.08093221300077857
+      ],
+      "category": "blas"
+    },
+    {
+      "name": "python_cpu_bound",
+      "status": "ok",
+      "duration_s": 0.08334255399677204,
+      "rss_delta_mb": 0.0,
+      "result": {
+        "threads": 1,
+        "data_size": 4000,
+        "iterations": 200,
+        "sequential_time_s": 0.06559685099637136,
+        "threaded_time_s": 0.06559685099637136,
+        "speedup": 1.0,
+        "theoretical_max_speedup": 1.0,
+        "efficiency": 1.0,
+        "free_threaded": false,
+        "python_version": "3.12",
+        "workload_hint": "python-threading-sensitive",
+        "message": "Threads help only with free-threaded Python; baseline single-thread shown.",
+        "verdict": "Single-threaded baseline"
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.09192224700382212,
+        0.08334255399677204,
+        0.06591818200104171
+      ],
+      "category": "python"
+    },
+    {
+      "name": "python_threaded_sum",
+      "status": "ok",
+      "duration_s": 0.5965877979979268,
+      "rss_delta_mb": 0.0,
+      "result": {
+        "workload_hint": "python-threading-sensitive",
+        "message": "Demonstrates free-threading scaling for CPU-bound Python.",
+        "threads": 1,
+        "work_size": 10000000,
+        "duration_s": 0.6053270939955837,
+        "speedup": 1.0,
+        "efficiency": 1.0,
+        "free_threaded": false,
+        "python_version": "3.12",
+        "verdict": "Single-threaded baseline"
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        0.5965877979979268,
+        0.5932496349996654,
+        0.6053644109997549
+      ],
+      "category": "python"
+    },
+    {
+      "name": "python_monte_carlo_var",
+      "status": "ok",
+      "duration_s": 2.1733705490041757,
+      "rss_delta_mb": 0.0,
+      "result": {
+        "symbols": [
+          "JPM",
+          "AMZN",
+          "META",
+          "NVDA",
+          "V",
+          "GOOG"
+        ],
+        "workers": 1,
+        "workers_type": "sequential",
+        "paths_per_worker": 120000,
+        "total_paths": 120000,
+        "var5": -0.17200928417026232,
+        "es5": -0.2164206528787503,
+        "blas_backend": "MKL",
+        "free_threaded": false,
+        "workload_hint": "mixed",
+        "message": "Mixed Python/NumPy; benefits from processes/BLAS more than image choice.",
+        "mc_time_s": 0.11008004899485968
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        2.1733705490041757,
+        2.9727131690015085,
+        2.095142820995534
+      ],
+      "category": "python"
+    },
+    {
+      "name": "python_orderbook_replay",
+      "status": "ok",
+      "duration_s": 1.6781262020012946,
+      "rss_delta_mb": 0.0390625,
+      "result": {
+        "rows_processed": 1500000,
+        "symbols": 10,
+        "gross_notional": 752935630.9774567,
+        "free_threaded": false,
+        "python_version": "3.12",
+        "workload_hint": "python-cpu-interpret",
+        "message": "Heavy Python loop; single-thread shows interpreter cost; FT has minimal overhead.",
+        "replay_time_s": 0.6079880899997079
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        1.6781262020012946,
+        1.5909852209952078,
+        1.7047995120010455
+      ],
+      "category": "python"
+    },
+    {
+      "name": "realworld_etl_pipeline",
+      "status": "ok",
+      "duration_s": 265.3862241800016,
+      "rss_delta_mb": -5.58203125,
+      "result": {
+        "input_rows": 208491543,
+        "output_rows": 208491543,
+        "symbols_processed": 10,
+        "workers": 1,
+        "pipeline_time_s": 223.31168375700508,
+        "free_threaded": false,
+        "python_version": "3.12",
+        "workload_hint": "mixed",
+        "message": "Mixed ETL with threading; prefer python:slim; 3.14 may help modestly."
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        257.55807662099687,
+        267.92786997299845,
+        265.3862241800016
+      ],
+      "category": "realworld"
+    },
+    {
+      "name": "realworld_risk_calc",
+      "status": "ok",
+      "duration_s": 0.9528867699991679,
+      "rss_delta_mb": 0.21875,
+      "result": {
+        "positions": 10,
+        "scenarios": 5000,
+        "workers": 1,
+        "var_5pct": -13083568059.124619,
+        "expected_shortfall_5pct": -16294341382.199934,
+        "calc_time_s": 0.9334540569980163,
+        "free_threaded": false,
+        "python_version": "3.12",
+        "workload_hint": "mixed",
+        "message": "Portfolio risk with threading; image choice minor; processes dominate."
+      },
+      "notes": null,
+      "iterations": 3,
+      "all_durations": [
+        5.430728120001731,
+        0.8344702100002905,
+        0.9528867699991679
+      ],
+      "category": "realworld"
+    }
+  ]
+}
